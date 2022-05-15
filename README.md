@@ -52,9 +52,78 @@ Basically, we are inputting an incomplete sentence and asking BERT to complete i
 
 #### Next Sentence Prediction (NSP)
 
+For NSP, themodel receives pairs of sentences as input and learns to predict if the econd sentence in the pair is the subsequent sentence in the oiginal document. During training, 50% of the inputs are a pair in which the second sentence is the subsequent sentence in the original document, while in the other 50%, a random sentence from the corpus is chosen as a second sentence. We assume that the rando msentence will be disconnected from the first sentence.
+
+To help the model distinguish between the two sentences in training, the input is processed in the following way before entering the model:
+
+1. a [CLS] token is inserted at the beginning of the first sentence and a [SEP] token is inserted at the end of the sentence.
+2. A sentence embedding indicating Sentence A or Sentence B is added to each token. Sentence embeddings ar esimilar in concept to token embeddings with a vocabulary of 2.
+3. A positional embedding is added to each token to indicate its position in the sequence.
+
+![image](https://user-images.githubusercontent.com/58920498/168491733-1395812c-524d-4717-b3b0-3fbd780a2994.png)
+
+To predict if the second sentence is indeed connected to the first, we need a few steps:
+1. The entire input sequence passes through the the transformer model.
+2. The output of the [CLS] token is transformed into a 2 x 1 shaped vector, using a simple classification layer
+3. We calculate the probability of IsNextSequence with softmax.
+
+When training a BERT model, MLM and NSP are trained together, and their common goal is to minimize the combined loss function of the two techniques.
+
+### Recurrent Neural Networks (RNN)
+
+RNNs are a form of machine learning algorithm that are ideal for sequential data such as text data for natural language processing. They are ideal for solving problems where the sequence is more important than the individual items themselves. So, they're essentially a fully connected neural network that contains a refactoring of some of its layers into a loop. That loop is typically an iteration over the addition or concatenation of two inputs, which is a matrix multiplication and a non-linear function.
+
+Let's compare an RNN to a fully connected neural network. If we take a sequence of three words of text and a network that predicts the fourth word, the network had three hidden layers, each of which are an affine function (i.e. matrix dot product multiplication), followed by a non-linear function, then the last hidden layer is wrapped up with an output from the last layer activation function. 
+
+The input vectors representing each word in the sequence are the lookups in a word embedding matrix, based on a one hot encoded vector representing the word in the vocabulary. Not that all inputted words use the same word embedding. In this context a word is actually a token that could represent a word or a punctuation mark. The output will then be a one hot encoded vector representing the predicted fourth word in the sequence.
+
+The first hidden layer takesa vector that represents the first word in the sequence as an input, and the output activations serve as one of the inputs into the second hidden layer. The second hidden layer follows the same structure as the second hidden layer, taking the activation from the second hidden layer combined with the vector representing the third word in the sequence. Once again, the inputs are added/concatenated together. 
+
+The output from the last hidden layer goes through an activation function that prodcuces an ouput representing a word from the vocabulary, as one hot encoded vector. The second and third hidden layer can both use the same weight matrix, which opens the opportunity of refactoring this into a loop to becoming recurrent. 
+
+![image](https://user-images.githubusercontent.com/58920498/168494357-bc5315de-d434-4101-9b73-b9472334268e.png)
+
+For a network to be recurrent, a loop needs to be factored into the network's model. it makes sense to use the same embedded weiht matrix for every word input. This means we can replace the second and third layers with iternations within a loop. Each iteration of the loop takes an input of a vector representing the next word in the sequence with the output activations from the last iteration. These inputs are added/concatenated together. The output from the last iteration is a representation of the next word in the sentence being put through the last layer activaiton function which converts it to a one hot encoded vector representing a word in the vocabulary. This allows the network to predict a word at the end of the sequence of any arbitrary length.
+
+![image](https://user-images.githubusercontent.com/58920498/168494619-f09088ec-fa67-4dea-a483-1c82bf8ee5b7.png)
+
+Once at the end of the sequence of words, the predicted ouptut ofthe next word could be stores and appended to an array for additional information in the next iteration. Each iteration then has access to the previous predictions. In theory, the sequence of predicted text could be infinite in length with a predicted word following the last predicted word in the loop.
+
+![image](https://user-images.githubusercontent.com/58920498/168494961-a1178721-3ade-4169-a3c6-ef8e5f8fd589.png)
+
+To get more layers of computation to be able to solve or approximate more complex takss, the output of the RNN could be fed into another RNN, or many more layers. But, as the number of layers of RNNs increases, the loss landscape can become impossible to train on- this is a vanishing gradient problem. It can also be fixed by using a Long Term Short Term Memory (LSTM) network. LSTM takes the current input and previous hidden state. It then computes the next hidden state. As part of this computation, the sigmoid function combines the values of these vectors between zero and one and then mulitplies them.
+
+A RNN has short term memory, but with LSTM the network can have long term memory. Instead of the recurring seciton of an RNN, the LTSM is a small neural netowrk consisting of four neural network layers. These recurring layers are from the RNN with three networks acting as "gates". The LTSM has a cell state too, along with a hidden state. This cell state is the long term memory. Instead of just returning the hidden state at each iteration, a tuple of hidden states are returned comprised of cell states and hidden states. As stated, the LSTM has three gates:
+
+1. Input gate- controls the information input at each time step.
+2. Output gate- controls how much information is outputted to the next cell or upward layer.
+3. Forget gate- controls how much data to lose at each time step.
+
 ## Experiments
+
+### BERT
+
+I first installed the necessary packages and libraries for BERT. At first I was confused on what to do when my import failed, but I just had to manually install the library using `pip`. I also am running this notebook on a local runtime through Anaconda's jupyter to Google Colab. My GPU is a NVIDIA GTX 1070 8GB, and I had some quick runtimes with this code. 
+
+```
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+n_gpu = torch.cuda.device_count()
+torch.cuda.get_device_name(0)
+
+SEED = 410
+
+random.seed(SEED)
+np.random.seed(SEED)
+torch.manual_seed(SEED)
+if device == torch.device("cuda"):
+    torch.cuda.manual_seed_all(SEED)
+```
+
+My next step was to create a label encoder to 
 
 ## Conclusion
 
 ## References
 https://towardsdatascience.com/bert-explained-state-of-the-art-language-model-for-nlp-f8b21a9b6270
+https://towardsdatascience.com/recurrent-neural-networks-and-natural-language-processing-73af640c2aa1
+
