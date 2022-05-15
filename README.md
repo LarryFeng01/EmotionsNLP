@@ -119,7 +119,166 @@ if device == torch.device("cuda"):
     torch.cuda.manual_seed_all(SEED)
 ```
 
-My next step was to create a label encoder to 
+My next step was to create a label encoder to handle the categorical variables and then prepare our tokenizer, *input_id*, *attention_masks*, and *labels*. Now, we create our train/test split with a train size of 90% and test size of 10%. I use a batch size of 32 since my GPU has 8GB of VRAM and cannot handle a larger batch size. Before we train, I create the model and set the following parameters:
+
+```
+model = BertForSequenceClassification.from_pretrained("bert-base-uncased", num_labels=6).to(device)
+lr = 2e-5
+adam_epsilon = 1e-8
+epochs = 6
+num_warmup_steps = 0
+num_training_steps = len(train_dataloader)*epochs
+
+optimizer = AdamW(model.parameters(), lr = lr, eps = adam_epsilon, correct_bias = False)
+scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps = num_warmup_steps, num_training_steps = num_training_steps)
+```
+Now, we can train our model while also validating with the code:
+
+```
+train_loss_set = []
+learning_rate = []
+
+model.zero_grad()
+
+for _ in tnrange(1,epochs+1, desc='Epoch'):
+    print(F"Epoch: {_}")
+    batch_loss = 0
+    for step, batch in enumerate(train_dataloader):
+        model.train()
+        batch = tuple(t.to(device) for t in batch)
+        b_input_ids, b_input_mask, b_labels = batch
+        b_labels = b_labels.type(torch.LongTensor) #solution for error:
+            #nll_loss_forward_reduce_cuda_kernel_2d_index" not implemented for 'Int'
+        
+        outputs = model(b_input_ids.cuda(), token_type_ids=None, attention_mask=b_input_mask.cuda(), labels=b_labels.cuda())
+        loss = outputs[0]
+        loss.backward()
+        torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+        optimizer.step()
+        scheduler.step()
+        optimizer.zero_grad()
+        batch_loss += loss.item()
+    avg_train_loss = batch_loss / len(train_dataloader)
+
+    for param_group in optimizer.param_groups:
+        print("\n\tCurrent learning rate: ", param_group['lr'])
+        learning_rate.append(param_group['lr'])
+
+    train_loss_set.append(avg_train_loss)
+    print(F'\n\tAverage training loss: {avg_train_loss}')
+
+    model.eval()
+    eval_accuracy, eval_mcc_accuracy, nb_eval_steps = 0,0,0
+
+    for batch in validation_dataloader:
+        batch = tuple(t.to(device) for t in batch)
+        b_labels = b_labels.type(torch.LongTensor)
+        b_input_ids, b_input_mask, b_labels = batch
+
+        with torch.no_grad():
+            logits = model(b_input_ids, token_type_ids = None, attention_mask = b_input_mask)
+        logits = logits[0].to('cpu').numpy()
+        label_ids = b_labels.to('cpu').numpy()
+        
+        pred_flat = np.argmax(logits, axis=1).flatten()
+        labels_flat = label_ids.flatten()
+
+        df_metrics = pd.DataFrame({'Epoch':epochs, 'Actual_class':labels_flat, 'Predicted_class':pred_flat})
+
+        tmp_eval_accuracy = accuracy_score(labels_flat, pred_flat)
+        tmp_eval_mcc_accuracy = matthews_corrcoef(labels_flat, pred_flat)
+
+        eval_accuracy += tmp_eval_accuracy
+        eval_mcc_accuracy += tmp_eval_mcc_accuracy
+        nb_eval_steps += 1
+    print(F'\n\tValidation Accuracy: {eval_accuracy/nb_eval_steps}')
+    print(F'\n\tValidation MCC Accuracy: {eval_mcc_accuracy/nb_eval_steps}')
+```
+After a few run throughs, the average time to complete training on the model is around 20 minutes.
+
+We can also receive the classification report by comparing our predicted values with the actual values.
+```
+print(classification_report(df_metrics['Actual_class'].values, df_metrics['Predicted_class'].values, target_names=label2int.keys(), digits=len(label2int)))
+```
+With some variation, our accracy ranges from 88% to 94% and our weighted average ranges from 87% to 97%. Below are plots of our models' accuracy throughout epochs while testing different parameters. The parameter "128 max length" refers to a max_length of 128 words for the tokenizer and input_ids; I also made this group have a batch size of 16. Contrastly, the 256 max length parameter has a batch size of 32. 
+
+Accuracy:
+![image](https://user-images.githubusercontent.com/58920498/168498440-e59250e3-d84c-455e-a135-88ba6f776448.png)
+
+Average Loss:
+![image](https://user-images.githubusercontent.com/58920498/168498449-8b9adf7c-289c-43b2-a977-0258df3ec01c.png)
+
+### Recurrent Neural Networks Model
+
+We start by using the tokenizer class to convert the sentences into word vectors
+```
+tokenizer=Tokenizer(15212,lower=True,oov_token='UNK')
+tokenizer.fit_on_texts(X)
+X_train=tokenizer.texts_to_sequences(X)
+X_train_pad=pad_sequences(X_train,maxlen=80,padding='post')
+df_train['label']=df_train.label.replace({'joy':0,'anger':1,'love':2,'sadness':3,'fear':4,'surprise':5})
+```
+
+After changing the labels for convenience, we can start making the model. I chose to use embedding, Dropout, LSTM, and softmax for my layers. 
+```
+model=Sequential()
+model.add(Embedding(15212,64,input_length=80))
+model.add(Dropout(0.6))
+model.add(Bidirectional(LSTM(80,return_sequences=True)))
+model.add(Bidirectional(LSTM(160)))
+model.add(Dense(6,activation='softmax'))
+print(model.summary())
+```
+And the output:
+```
+Model: "sequential"
+_________________________________________________________________
+ Layer (type)                Output Shape              Param #   
+=================================================================
+ embedding (Embedding)       (None, 80, 64)            973568    
+                                                                 
+ dropout (Dropout)           (None, 80, 64)            0         
+                                                                 
+ bidirectional (Bidirectiona  (None, 80, 160)          92800     
+ l)                                                              
+                                                                 
+ bidirectional_1 (Bidirectio  (None, 320)              410880    
+ nal)                                                            
+                                                                 
+ dense (Dense)               (None, 6)                 1926      
+                                                                 
+=================================================================
+Total params: 1,479,174
+Trainable params: 1,479,174
+Non-trainable params: 0
+_________________________________________________________________
+```
+
+Next, we can compile the model with "Adam" and now we can train the model. 
+
+We run the follow line to start fitting:
+
+```
+hist=model.fit(X_train_pad,Y_train_f,epochs=15,validation_data=(X_val_pad,Y_val_f))
+```
+
+Our first epoch returns:
+```
+Epoch 1/15
+500/500 [==============================] - 17s 34ms/step - loss: 0.2099 - accuracy: 0.9244 - val_loss: 0.2069 - val_accuracy: 0.9210
+```
+And our last epoch is:
+```
+Epoch 15/15
+500/500 [==============================] - 17s 34ms/step - loss: 0.0431 - accuracy: 0.9830 - val_loss: 0.1739 - val_accuracy: 0.9375
+```
+
+Although we do not see a significant jump from accuracy (i.e. .40s to .90s), this result is still very satisfactory for now. Since there is an issue of overfitting, we have to check with the test data to make sure. This is the result:
+```
+63/63 [==============================] - 1s 16ms/step - loss: 0.2004 - accuracy: 0.9290
+[0.2004082202911377, 0.9290000200271606]
+```
+With the first number being the loss and the second being the accuracy. With these results I am satisfied with the model and deem it not significantly overfit.
 
 ## Conclusion
 
