@@ -29,7 +29,28 @@ Although I do not use stopwords in my models, I think its interesting to see the
 
 ### BERT (Bidirectional Encoder Represetations from Transformers)
 
-BERT is a machine learning technique developed by Google and is transformer based for Natural Language Processing (NLP). 
+BERT is a machine learning technique developed by Google and is transformer based for Natural Language Processing (NLP). The key technical innovaiton is applying the bidirectional training of "transformer" to language modelling. This is in contrast to previous efforts which focus on the text sequence from either the left-right or right-left training. Results from other studies have shown that a language model that has been bidirectionally trained can have a deeper sense of langauge context and flow compared to a single-direction model. BERT uses "transformer's" techniques of producing predictions for tasks to generate a language model. Compared to directional models, a "transformer" encoder reads the entire sequence of words at once. This allows the model to learn the context of a word based on all of its surroundings. 
+
+The chart in the below section is a high-level description of the "transformer" encoder. The input is a sequence of tokens which are first embedded into vectors and then processed in the neural network. The output is a sequence of vectors of size H, in which each vector corresponds to an input token with the same index.
+
+![image](https://user-images.githubusercontent.com/58920498/168461460-7da5c944-ffec-477f-8e25-a9e9898672cb.png)
+
+When training model languages, there is a challenge of defining a prediction goal- many models predict the next word in a sequence which is a directional approach which inherently limits context learning. So, to overcome this challenge, BERT uses two training strategies: Masked LM (MLM) and Next Sentence Prediction (NSP).
+
+#### Masked LM
+
+MLM consists of giving BERT a sentence and optimizing the weights inside BERT to output the same sentence on the other side. So we input a sentence and ask that BERT outputs the same sentence. But, before we actually give BERT the input, we mask a few tokens.
+
+![image](https://user-images.githubusercontent.com/58920498/168461527-c73cd4bf-fede-40d3-8c46-2fd178c40329.png)
+
+Basically, we are inputting an incomplete sentence and asking BERT to complete it for us. There are a couple of steps that occur within MLM.
+
+1. We tokenize our text just like we usually do with transformers, and we begin text tokenization. From tokenization we receive three different tensors: *input_ids*, *token_type_ids*, and *attention_mask*. 
+2. We create a labels tensor to train our model and use the labels tensor to calculate the loss and optimize after.
+3. We masks tokens in *input_ids*. Now that we created a copy of *input_ids* for labels, we can mask a random selection of tokens.
+4. We calculate loss by processing the *input_ids* and labels tensors through our BERT model and calculate the loss between both. 
+
+#### Next Sentence Prediction (NSP)
 
 ## Experiments
 
