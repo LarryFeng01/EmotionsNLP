@@ -196,17 +196,48 @@ for _ in tnrange(1,epochs+1, desc='Epoch'):
 ```
 After a few run throughs, the average time to complete training on the model is around 20 minutes.
 
-We can also receive the classification report by comparing our predicted values with the actual values.
-```
-print(classification_report(df_metrics['Actual_class'].values, df_metrics['Predicted_class'].values, target_names=label2int.keys(), digits=len(label2int)))
-```
-With some variation, our accracy ranges from 88% to 94% and our weighted average ranges from 87% to 97%. Below are plots of our models' accuracy throughout epochs while testing different parameters. The parameter "128 max length" refers to a max_length of 128 words for the tokenizer and input_ids; I also made this group have a batch size of 16. Contrastly, the 256 max length parameter has a batch size of 32. 
+With some variation, our validation accuracy ranges from .92 to .94 and our average loss decreased from .35 to less than .10. Below are plots of our models' accuracy throughout epochs while testing different parameters. The parameter "128 max length" refers to a max_length of 128 words for the tokenizer and input_ids; I also made this group have a batch size of 16. Contrastly, the 256 max length parameter has a batch size of 32. 
 
 Accuracy:
 ![image](https://user-images.githubusercontent.com/58920498/168498440-e59250e3-d84c-455e-a135-88ba6f776448.png)
 
 Average Loss:
 ![image](https://user-images.githubusercontent.com/58920498/168498449-8b9adf7c-289c-43b2-a977-0258df3ec01c.png)
+
+We can also receive the classification report by comparing our predicted values with the actual values.
+```
+print(classification_report(df_metrics['Actual_class'].values, df_metrics['Predicted_class'].values, target_names=label2int.keys(), digits=len(label2int)))
+```
+
+Outputs:
+```
+              precision    recall  f1-score   support
+
+     sadness    1.00000   1.00000   1.00000         2
+         joy    1.00000   1.00000   1.00000         1
+       anger    1.00000   0.83333   0.90909         6
+        fear    0.00000   0.00000   0.00000         0
+    surprise    1.00000   1.00000   1.00000         7
+
+    accuracy                        0.93750        16
+   macro avg    0.80000   0.76667   0.78182        16
+weighted avg    1.00000   0.93750   0.96591        16
+```
+```
+              precision    recall  f1-score   support
+
+     sadness    1.00000   0.66667   0.80000         3
+         joy    0.66667   1.00000   0.80000         2
+       anger    0.87500   1.00000   0.93333         7
+        fear    1.00000   0.50000   0.66667         2
+    surprise    1.00000   1.00000   1.00000         2
+
+    accuracy                        0.87500        16
+   macro avg    0.90833   0.83333   0.84000        16
+weighted avg    0.90365   0.87500   0.86667        16
+```
+
+From our classification report, we see a high accuracy across our models. Our accuracy ranges from 0.875 and 0.9375 while our weighted average ranges from 0.867 and .965.
 
 ### Recurrent Neural Networks Model
 
@@ -280,9 +311,19 @@ Although we do not see a significant jump from accuracy (i.e. .40s to .90s), thi
 ```
 With the first number being the loss and the second being the accuracy. With these results I am satisfied with the model and deem it not significantly overfit.
 
+Accuracy Curve:
+![image](https://user-images.githubusercontent.com/58920498/168500738-c2791afa-c7de-41da-8a34-a313a36976be.png)
+
+Loss Curve:
+![image](https://user-images.githubusercontent.com/58920498/168500753-41fe4dd1-8edd-4b5f-b167-7b7b8db37904.png)
+
 ## Conclusion
+
+In this research, I proposed two different types of models to extract emotion-relevant representations. One is a supervised machine learning technique, while the other is not. My main goal was to compare these two models to see which is more efficient and produces the better results. But, for the second part, I find it hard to compare accuracies when the model ranges in accuracy, and both models have high accuracies. However, if I had to choose a model, I would say the RNN is preferred because of its consistent, high accuracy and low run-time. 
+
+In the future work, I aim to investigate the model's parameters more in-depth and find more optimal parameters that I could not get to due to run-time and deadlines. I also plan to look at other models just to compare what is available for NLP data. In addition, using only my notebook again, I would like to run hundreds of epochs with my current models so that I can get a solid number for my accuracy and loss scores in order to more precisely compare the two models against each other. As stated, I am not able to constantly run the code on my machine due to time constraints and other priorities. 
 
 ## References
 https://towardsdatascience.com/bert-explained-state-of-the-art-language-model-for-nlp-f8b21a9b6270
 https://towardsdatascience.com/recurrent-neural-networks-and-natural-language-processing-73af640c2aa1
-
+https://aclanthology.org/D18-1404.pdf
