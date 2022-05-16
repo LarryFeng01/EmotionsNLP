@@ -325,8 +325,8 @@ In this research, I proposed two different types of models to extract emotion-re
 In the future work, I aim to investigate the model's parameters more in-depth and find more optimal parameters that I could not get to due to run-time and deadlines. I also plan to look at other models just to compare what is available for NLP data. In addition, using only my notebook again, I would like to run hundreds of epochs with my current models so that I can get a solid number for my accuracy and loss scores in order to more precisely compare the two models against each other. As stated, I am not able to constantly run the code on my machine due to time constraints and other priorities. 
 
 ## References
-https://towardsdatascience.com/bert-explained-state-of-the-art-language-model-for-nlp-f8b21a9b6270
+1. https://towardsdatascience.com/bert-explained-state-of-the-art-language-model-for-nlp-f8b21a9b6270
 
-https://towardsdatascience.com/recurrent-neural-networks-and-natural-language-processing-73af640c2aa1
+2. https://towardsdatascience.com/recurrent-neural-networks-and-natural-language-processing-73af640c2aa1
 
-https://aclanthology.org/D18-1404.pdf
+3. https://aclanthology.org/D18-1404.pdf
