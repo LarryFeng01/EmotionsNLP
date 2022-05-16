@@ -326,5 +326,7 @@ In the future work, I aim to investigate the model's parameters more in-depth an
 
 ## References
 https://towardsdatascience.com/bert-explained-state-of-the-art-language-model-for-nlp-f8b21a9b6270
+
 https://towardsdatascience.com/recurrent-neural-networks-and-natural-language-processing-73af640c2aa1
+
 https://aclanthology.org/D18-1404.pdf
